@@ -25,5 +25,6 @@ window.onload = function() {
     
     const application = new Application(canvas, settings);
 
-    application.render();
+    application.init();
+    application.run();
 }
