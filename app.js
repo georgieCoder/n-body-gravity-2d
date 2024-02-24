@@ -17,7 +17,8 @@ export class Application {
         for (let i = 0; i < this.particles.length; i++) {
             this.particles[i] = {x: 0, y: 0, velX: 0, velY: 0, mass: 1}
         }
-        this.buffer = null;
+        this.aheadBuffers = [];
+        this.wasFirstData = false;
     }
 
     init() {
@@ -29,10 +30,12 @@ export class Application {
     }
 
     render(timestamp) {
-        if (!this.buffer) {
+        
+        if (!this.wasFirstData) {
             requestAnimationFrame(this.render.bind(this))
             return
         }
+        console.log(this.aheadBuffers.length)
         this.prepareNextStep();
         this.renderer.render(this.particles)
 
@@ -42,17 +45,34 @@ export class Application {
     }
 
     onData(data) {
-        this.buffer = data.buffer;
+        this.aheadBuffers.push(data.buffer);
+        if (this.aheadBuffers.length === this.settings.simulation.bufferCount) {
+            if (!this.wasFirstData) this.wasFirstData = true
+        } else {
+            if (!this.wasFirstData) {
+                this.requestNextStep()
+            }
+        }
+        
     }
 
     prepareNextStep() {
-        for (let i = 0; i < this.settings.physics.particleCount; i++) {
-            this.particles[i].x = this.buffer[i * ITEM_SIZE];
-            this.particles[i].y = this.buffer[i * ITEM_SIZE + 1];
-            this.particles[i].velX = this.buffer[i * ITEM_SIZE + 2];
-            this.particles[i].velY = this.buffer[i * ITEM_SIZE + 3];
-            this.particles[i].mass = this.buffer[i * ITEM_SIZE + 4];
+        if (this.aheadBuffers.length === 0) {
+            return
         }
+
+        const buffer = this.aheadBuffers.shift();
+        
+        for (let i = 0; i < this.settings.physics.particleCount; i++) {
+            this.particles[i].x = buffer[i * ITEM_SIZE];
+            this.particles[i].y = buffer[i * ITEM_SIZE + 1];
+            this.particles[i].velX = buffer[i * ITEM_SIZE + 2];
+            this.particles[i].velY = buffer[i * ITEM_SIZE + 3];
+            this.particles[i].mass = buffer[i * ITEM_SIZE + 4];
+        }
+
+        this.backend.freeBuffer(buffer)
+
         this.requestNextStep();
     }
 

@@ -17,8 +17,10 @@ class WorkerBackendImpl {
     async init(settings) {
         this.engine = new PhysicsEngine(settings);
         this.settings = settings;
-        this.buffers = new Array();
-        this.buffers.push(new Float32Array(this.settings.physics.particleCount * ITEM_SIZE))
+        this.buffers = new Array(this.settings.simulation.bufferCount);
+        for (let i = 0; i < this.settings.simulation.bufferCount; i++) {
+            this.buffers[i] = new Float32Array(this.settings.physics.particleCount * ITEM_SIZE);
+        }
         this.particles = ParticleInitializer.swirl(this.settings);
     }
 
@@ -26,9 +28,14 @@ class WorkerBackendImpl {
         this.engine.step(this.particles);
         const buffer = this.buffers.shift();
         this._fillBuffer(buffer);
-        this.buffers.push(new Float32Array(this.settings.physics.particleCount * ITEM_SIZE))
         return {
             buffer: buffer
+        }
+    }
+
+    ack(buffer) {
+        if (this.buffers.length < this.settings.simulation.bufferCount) {
+            this.buffers.push(buffer)
         }
     }
 
@@ -67,10 +74,13 @@ class WorkerHandler {
                 postMessage({type: 'ready'});}
                 break;
             case "step":
-                
                 const data = this.backend.step()
                 postMessage({type: 'data', buffer: data.buffer}, [data.buffer.buffer])
                 
+                break;
+            case 'ack':
+                const {buffer} = e.data;
+                this.backend.ack(buffer)
                 break;
         }
     }

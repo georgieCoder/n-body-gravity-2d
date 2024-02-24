@@ -19,6 +19,10 @@ export class Backend {
         this.worker.postMessage({type: 'init', settings: settings})
     }
 
+    freeBuffer(buffer) {
+        this.worker.postMessage({type: 'ack', buffer}, [buffer.buffer])
+    }
+
     requestNextStep() {
         this.worker.postMessage({type: 'step'})
     }

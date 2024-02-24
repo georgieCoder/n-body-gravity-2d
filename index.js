@@ -13,7 +13,8 @@ const settings = {
         minInteractionDistanceSq: 0.001
     },
     simulation: {
-        segmentMaxCount: 32
+        segmentMaxCount: 32,
+        bufferCount: 100
     },
     common: {
         stats: false
