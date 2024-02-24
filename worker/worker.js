@@ -62,13 +62,13 @@ class WorkerHandler {
             case "init":{
                 const {settings} = e.data;
 
-                await WorkerInstance.init(settings);
+                await this.backend.init(settings);
 
                 postMessage({type: 'ready'});}
                 break;
             case "step":
                 
-                const data = WorkerInstance.step()
+                const data = this.backend.step()
                 postMessage({type: 'data', buffer: data.buffer}, [data.buffer.buffer])
                 
                 break;
