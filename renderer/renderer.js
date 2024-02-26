@@ -4,20 +4,19 @@ export class Renderer {
         this.canvas.width = settings.world.worldWidth;
         this.canvas.height = settings.world.worldHeight;
         this.context = this.canvas.getContext('2d');
-        
+        this.stats = {
+            renderTime: 0
+        }
 
-        this._updateRenderImageData()
+        this._initRenderImageData()
 
         this.settings = settings;
-        this._scale = {
-            x: 1,
-            y: 1
-        };
 
         this._maxSpeed = this.settings.physics.gravity / 100;
     }
 
     render(particles) {
+        const t = performance.now();
         this._clearCanvas()
         for (let i = 0; i < particles.length; i++) {
             const particle = particles[i];
@@ -29,8 +28,8 @@ export class Renderer {
                     continue
             }
 
-            let x = Math.floor(particle.x * this._scale.x);
-            let y = Math.floor(particle.y * this._scale.y);
+            let x = Math.floor(particle.x);
+            let y = Math.floor(particle.y);
     
             const index = ( x + y * this.canvas.width );
             
@@ -44,6 +43,7 @@ export class Renderer {
             this.pixels[index] = this._blendColors(this.pixels[index], color);
         }
         this.context.putImageData(this.renderImageData, 0, 0)
+        this.stats.renderTime = Math.round(performance.now() - t);
     }
 
     _clearCanvas() {
@@ -52,7 +52,7 @@ export class Renderer {
         }
     }
 
-    _updateRenderImageData() {
+    _initRenderImageData() {
         this.renderImageData = this.context.createImageData(Math.ceil(this.canvas.width), Math.ceil(this.canvas.height));
         this.pixels = new Uint32Array(this.renderImageData.data.buffer);
     }

@@ -2,6 +2,7 @@ import { Application } from "./app.js";
 
 const settings = {
     world: {
+        fps: 60,
         worldHeight: window.innerHeight,
         worldWidth: window.innerWidth
     },
@@ -14,7 +15,7 @@ const settings = {
     },
     simulation: {
         segmentMaxCount: 32,
-        bufferCount: 100
+        bufferCount: 3
     },
     common: {
         stats: false

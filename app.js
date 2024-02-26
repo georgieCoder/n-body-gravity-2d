@@ -1,17 +1,20 @@
 import { PhysicsEngine } from "./engine/physics.js";
-import { FPSHelper } from "./helpers/fpsHelper.js";
+import { Stats } from "./helpers/Stats.js";
 import { Renderer } from "./renderer/renderer.js";
 import { ParticleInitializer } from "./utils/particleInitializer.js";
+import { DataSmoother } from "./utils/smooth.js";
 import { ITEM_SIZE, WorkerBackend } from "./worker/worker.js";
 
 export class Application {
+    lastRenderTime;
+
     constructor(canvas, settings) {
         this.canvas = canvas;
         this.settings = settings;
 
         this.backend = new WorkerBackend();
         this.renderer = new Renderer(this.canvas, this.settings);
-        this.fpsHelper = new FPSHelper(1000);
+        this.stats = new Stats(1000);
 
         this.particles = new Array(this.settings.physics.particleCount);
         for (let i = 0; i < this.particles.length; i++) {
@@ -19,9 +22,11 @@ export class Application {
         }
         this.aheadBuffers = [];
         this.wasFirstData = false;
+        this.pendingBuffers = 0;
     }
 
     init() {
+        this.testSmoother = new DataSmoother(this.settings.world.fps * 4, 1);
         this.backend.init(this.onData.bind(this), this.requestNextStep.bind(this), this.settings)
     }
 
@@ -30,30 +35,34 @@ export class Application {
     }
 
     render(timestamp) {
-        
         if (!this.wasFirstData) {
+            this.lastRenderTime = timestamp
             requestAnimationFrame(this.render.bind(this))
             return
         }
-        console.log(this.aheadBuffers.length)
         this.prepareNextStep();
         this.renderer.render(this.particles)
 
-        this.fpsHelper.update();
+        const renderTime = timestamp - this.lastRenderTime;
+        this.stats.frameTime = renderTime;
+        this.stats.renderTime = this.renderer.stats.renderTime;
+        this.stats.drawStats();
         
+        this.lastRenderTime = timestamp
         requestAnimationFrame(this.render.bind(this))
     }
 
     onData(data) {
+        this.stats.calcTime = data.time;
+        this.testSmoother.postValue(this.stats.calcTime)
+        console.log(this.stats.calcTime, this.testSmoother.smoothedValue)
         this.aheadBuffers.push(data.buffer);
-        if (this.aheadBuffers.length === this.settings.simulation.bufferCount) {
-            if (!this.wasFirstData) this.wasFirstData = true
-        } else {
-            if (!this.wasFirstData) {
-                this.requestNextStep()
-            }
-        }
+        this.wasFirstData = true;
+        this.pendingBuffers -= 1;
         
+        if (this.aheadBuffers.length + this.pendingBuffers < this.settings.simulation.bufferCount) {
+            this.requestNextStep()
+        }
     }
 
     prepareNextStep() {
@@ -77,6 +86,7 @@ export class Application {
     }
 
     requestNextStep() {
+        this.pendingBuffers += 1;
         this.backend.requestNextStep();
     }
 }
